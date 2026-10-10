@@ -1167,6 +1167,7 @@ if(GAS){
  window.addEventListener('load',function(){var b=$('.appbar .btn.pri');if(b){b.textContent='☁ บันทึก';b.title='บันทึกขึ้น Google Sheet ทันที (ระบบบันทึกอัตโนมัติอยู่แล้ว)'}
   var d=$('.appbar .menu .drop');if(d){var x=el('button','',"📊 เปิดฐานข้อมูล Google Sheet<small>ดูข้อมูลที่ระบบเก็บไว้</small>");x.onclick=function(){if(window.SHEETURL)window.open(window.SHEETURL,'_blank');else toast('ยังเชื่อมต่อระบบไม่เสร็จ')};d.insertBefore(x,d.firstChild)}});
 }
+if(GAS){var _imp=importText;importText=function(){var n=_imp.apply(this,arguments);if(n>=0){Object.keys(DB.m).forEach(function(k){if(!DB.m[k].seed)DIRTY[k]=1});schedSync()}return n}}
 
 </script>
 </body></html>
