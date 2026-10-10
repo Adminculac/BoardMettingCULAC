@@ -786,9 +786,10 @@ async function saveDevice(asNew){var nf=Object.keys(DB.files||{}).length;if(nf)t
 async function exportBackup(){var nm='ข้อมูลเชิญประชุม_สำรอง_'+stamp()+'.json';download(nm,JSON.stringify(await payloadFull()));toast('⬇ ส่งออกไฟล์สำรอง '+nm+' แล้ว')}
 function importText(text,name){var data=null;try{data=JSON.parse(text)}catch(e){var m=text.match(/<script[^>]*id=["']?seed["']?[^>]*>([\s\S]*?)<\/script>/i);if(m)try{data=JSON.parse(m[1].replace(/\\u003c/g,'<'))}catch(e2){}}
  if(!data||typeof data.m!=='object'){toast('ไฟล์ '+name+' ไม่มีข้อมูลเชิญประชุม','bad');return -1}
- persist();var add=0,upd=0,same=0,last=null;Object.keys(data.m).forEach(function(k){var b=data.m[k];if(!b)return;
+ persist();var add=0,upd=0,same=0,last=null,conf=[];Object.keys(data.m).forEach(function(k){var b=data.m[k];if(!b)return;
   var key=DB.m[k]?k:Object.keys(DB.m).filter(function(x){return b.no&&noKey(DB.m[x])&&noKey(DB.m[x])===noKey(b)})[0],a=key?DB.m[key]:null;
-  if(!a){DB.m[k]=b;add++;last=k;var i=DB.del.indexOf(k);if(i>=0)DB.del.splice(i,1)}else{last=key;if(a.seed||(b.updated||0)>(a.updated||0)){if(key!==k){delete DB.m[key];key=k}DB.m[key]=b;upd++;if(data.cur===k)data.cur=key;if(DB.cur&&!DB.m[DB.cur])DB.cur=key}else{same++;if(data.cur===k)data.cur=key}}});
+  if(!a){DB.m[k]=b;add++;last=k;var i=DB.del.indexOf(k);if(i>=0)DB.del.splice(i,1)}else{last=key;if(a.seed||(b.updated||0)>(a.updated||0)){if(key!==k){delete DB.m[key];key=k}DB.m[key]=b;upd++;if(data.cur===k)data.cur=key;if(DB.cur&&!DB.m[DB.cur])DB.cur=key}else{if(sig(a)!==sig(b))conf.push([key,k,b]);else same++;if(data.cur===k)data.cur=key}}});
+ if(conf.length){if(confirm('ข้อมูล '+conf.map(function(c){return 'ครั้งที่ '+(c[2].no||'')}).join(', ')+' ในระบบถูกแก้ไขหลังจากที่บันทึกไฟล์นี้\n\nกด ตกลง = ใช้ข้อมูลจากไฟล์นี้แทน\nกด ยกเลิก = เก็บข้อมูลในระบบไว้')){conf.forEach(function(c){var key=c[0],k=c[1],b=Object.assign({},c[2],{updated:Date.now()});delete b.seed;if(key!==k)delete DB.m[key];DB.m[k]=b;upd++;if(DB.cur===key||data.cur===k)DB.cur=k})}else same+=conf.length}
  if(data.logo&&!DB.logo){DB.logo=data.logo;LOGO=data.logo}
  if(data.cover){['logo','photo'].forEach(function(k){if(data.cover[k]){CV[k]=data.cover[k];fput('cv-'+k,{url:data.cover[k]})}})}
  DB.files=DB.files||{};var fq=[];Object.keys(data.files||{}).forEach(function(id){var f=data.files[id];if(!f)return;var meta=Object.assign({},f);delete meta.data;delete meta.missing;
@@ -1107,7 +1108,7 @@ async function makeBook(){var btn=$('#bkgo');if(btn.disabled)return;btn.disabled
    เชื่อม Google Apps Script — เก็บข้อมูลใน Google Sheet / ไฟล์ใน Drive
    ===================================================================== */
 var GAS=!!(window.google&&google.script&&google.script.run);
-var DIRTY={},SYNCING=false,SYNCT=null,LASTSYNC=0,SYNCERR='',CLOUDREADY=false,NOUP={};
+var UPQ=[],UPRUN=false,UPDONE=0,DIRTY={},SYNCING=false,SYNCT=null,LASTSYNC=0,SYNCERR='',CLOUDREADY=false,NOUP={};
 function gs(fn){var a=[].slice.call(arguments,1);return new Promise(function(res,rej){var r=google.script.run.withSuccessHandler(res).withFailureHandler(function(e){rej(e&&e.message?e:new Error(String(e)))});r[fn].apply(r,a)})}
 if(GAS){
  document.documentElement.classList.add('gas');
@@ -1119,7 +1120,7 @@ if(GAS){
  var _fput=fput,_fget=fget,_fdel=fdel;
  fput=function(id,rec){return _fput(id,rec).then(function(){if(NOUP[id]){delete NOUP[id];return}
   if(/^cv-/.test(id)){if(rec&&rec.url)gs('api_setSetting',id,rec.url).catch(function(){});return}
-  if(rec&&rec.blob)setTimeout(function(){upFile(id,rec)},0)})};
+  if(rec&&rec.blob){UPQ.push([id,rec]);setTimeout(runUp,0)}})};
  fget=function(id){return _fget(id).then(function(r){if(r||/^cv-/.test(id)||!(DB.files||{})[id])return r;
   return gs('api_getFile',id).then(function(x){if(!x)return null;var bin=atob(x.base64),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
    var rec={blob:new Blob([u],{type:x.type}),name:x.name,type:x.type};NOUP[id]=1;return _fput(id,rec).then(function(){delete NOUP[id];return rec})}).catch(function(){return null})})};
@@ -1168,6 +1169,14 @@ if(GAS){
   var d=$('.appbar .menu .drop');if(d){var x=el('button','',"📊 เปิดฐานข้อมูล Google Sheet<small>ดูข้อมูลที่ระบบเก็บไว้</small>");x.onclick=function(){if(window.SHEETURL)window.open(window.SHEETURL,'_blank');else toast('ยังเชื่อมต่อระบบไม่เสร็จ')};d.insertBefore(x,d.firstChild)}});
 }
 if(GAS){var _imp=importText;importText=function(){var n=_imp.apply(this,arguments);if(n>=0){Object.keys(DB.m).forEach(function(k){if(!DB.m[k].seed)DIRTY[k]=1});schedSync()}return n}}
+
+async function runUp(){if(UPRUN)return;UPRUN=true;UPDONE=0;while(UPQ.length){var x=UPQ.shift();status();await upFile(x[0],x[1]);UPDONE++}UPRUN=false;status()}
+if(GAS){
+ openData=function(){$('#imp').click()};
+ var _st2=status;status=function(){_st2.apply(this,arguments);var b=$('#st2');if(b&&UPRUN){b.className='pill warn';b.textContent='กำลังอัปโหลดไฟล์แนบขึ้น Drive… เหลือ '+(UPQ.length+1)+' ไฟล์'}};
+ unsavedDevice=function(){return SYNCING||UPRUN||UPQ.length>0||Object.keys(DIRTY).length>0};
+ var _impInput=impInput;impInput=function(i){var f=i.files[0];if(f&&f.size>1048576)toast('กำลังอ่านไฟล์ '+f.name+' ('+(f.size/1048576).toFixed(1)+' MB)…');_impInput.apply(this,arguments)};
+}
 
 </script>
 </body></html>
