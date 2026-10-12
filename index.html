@@ -484,10 +484,14 @@ main{padding:16px 18px;min-width:0}
 
 @media print{
  body{background:#fff}
- .top,.side,.sbtop,.card,.tabs,.pbar,.ct,.add,.att,.w-book,#toast{display:none!important}
+ .appbar,.top,.side,.sbtop,.card,.tabs,.pbar,.ct,.add,.att,.w-book,#toast,#nav,.ipanel,.mlist,.drop,.dz{display:none!important}
+ html,body{background:#fff!important}.app{display:block!important;grid-template-columns:none!important;margin:0!important}
  .app{display:block;padding:0;max-width:none}
  .pages{overflow:visible;padding:0}
- .pages .w-memo,.pages .w-agenda{display:block!important}
+ #pages .pw.w-memo,#pages .pw.w-agenda{display:block!important}
+ main,#pages,#pages .pw{padding:0!important;margin:0!important;width:auto!important;max-width:none!important;box-shadow:none!important;border:0!important}
+ #pages .page{box-shadow:none!important;border:0!important;border-radius:0!important;margin:0!important;padding:0!important;width:auto!important;min-height:0!important}
+ body.only-memo #pages .pw.w-agenda,body.only-agenda #pages .pw.w-memo{display:none!important}
  .pw{width:auto;margin:0}
  .page{margin:0;box-shadow:none;width:auto;min-height:0;padding:0}
  .w-memo{break-after:page}
@@ -566,6 +570,8 @@ main{padding:16px 18px;min-width:0}
 </div>
 <div class="sign"><div>(สัตวแพทย์หญิง ดร.นิธิรา&nbsp; อนัคกุล)</div><div>รองผู้อำนวยการศูนย์สัตว์ทดลอง จุฬาลงกรณ์มหาวิทยาลัย ฝ่ายบริหาร</div></div>
 </div>
+
+
 </div>
 <div class="pw w-book">
 <section class="card bk">
